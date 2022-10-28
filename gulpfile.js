@@ -1,85 +1,50 @@
-const {src, dest, series, task, parallel, watch} = require('gulp');
-const browsersync = require("browser-sync").create();
-const prefixer = require('gulp-autoprefixer');
-const sass = require('gulp-sass')(require('sass'));
-const sourcemaps = require('gulp-sourcemaps');
-const rigger = require('gulp-rigger');
-const plumber = require("gulp-plumber");
-const del = require("delete");
-const path = {
-    dev: {
-        html: 'dev/',
-        js: 'dev/js/',
-        css: 'dev/css/',
-        img: 'dev/img/',
-        fonts: 'dev/fonts/'
-    },
-    src: {
-        html: 'src/*.html',
-        js: 'src/js/**/*.js',
-        css: 'src/css/**/*.scss',
-        img: 'src/img/**/*.*',
-        fonts: 'src/fonts/**/*.*'
-    },
+import gulp from 'gulp';
+
+import { path } from './gulp/config/path.js';
+import { plugins } from './gulp/config/plugins.js';
+
+global.app = {
+  dev: !process.argv.includes('--build'),
+  prod: process.argv.includes('--build'),
+  path,
+  gulp,
+  plugins,
 };
 
-function browserSync(release) {
-    browsersync.init({
-        server: {baseDir: path.dev.html},
-        notify: false,
-    });
+import { copy } from './gulp/tasks/copy.js';
+import { reset } from './gulp/tasks/reset.js';
+import { html } from './gulp/tasks/html.js';
+import { server } from './gulp/tasks/server.js';
+import { scss } from './gulp/tasks/scss.js';
+import { js } from './gulp/tasks/js.js';
+import { images } from './gulp/tasks/images.js';
+import { otfToTtf, ttfToWoff, fontsStyle } from './gulp/tasks/fonts.js';
+import { svgSprive } from './gulp/tasks/svgSprive.js';
+import { zip } from './gulp/tasks/zip.js';
+import { ftp } from './gulp/tasks/ftp.js';
 
-    watch(path.src.css, css);
-    watch(path.src.js, js);
-    watch(path.src.html, html);
-    watch(path.src.img, img);
-    watch(path.src.fonts, fonts);
+function watcher() {
+  gulp.watch(path.watch.files, copy);
+  gulp.watch(path.watch.html, html);
+  gulp.watch(path.watch.scss, scss);
+  gulp.watch(path.watch.js, js);
+  gulp.watch(path.watch.images, images);
 }
 
-function clean(done) {
-    del([path.dev.html]);
-    done();
-}
+export { svgSprive };
 
-function html(done) {
-    src(path.src.html)
-        .pipe(rigger())
-        .pipe(dest(path.dev.html))
-        .pipe(browsersync.stream());
-    done();
-}
+const fonts = gulp.series(otfToTtf, ttfToWoff, fontsStyle);
 
-function css(done) {
-    src(path.src.css)
-        .pipe(plumber())
-        .pipe(sourcemaps.init())
-        .pipe(sass().on('error', sass.logError))
-        .pipe(sourcemaps.write())
-        .pipe(prefixer())
-        .pipe(dest(path.dev.css))
-        .pipe(browsersync.stream());
-    done();
-}
+const mainTasks = gulp.series(fonts, gulp.parallel(copy, html, scss, js, images));
 
-function js(done) {
-    src(path.src.js)
-        .pipe(plumber())
-        .pipe(rigger())
-        .pipe(dest(path.dev.js))
-        .pipe(browsersync.stream());
-    done();
-}
+const dev = gulp.series(reset, mainTasks, gulp.parallel(watcher, server));
+const prod = gulp.series(reset, mainTasks);
+const deployZip = gulp.series(reset, mainTasks, zip);
+const deployFTP = gulp.series(reset, mainTasks, ftp);
 
-function img(done) {
-    src(path.src.img)
-        .pipe(dest(path.dev.img))
-    done();
-}
+export { dev };
+export { prod };
+export { deployZip };
+export { deployFTP };
 
-function fonts(done) {
-    src(path.src.fonts)
-        .pipe(dest(path.dev.fonts))
-    done();
-}
-
-task('default', series(clean, parallel(html, css, js, img, fonts), browserSync));
+gulp.task('default', dev);

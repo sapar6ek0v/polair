@@ -1,6 +1,15 @@
-//= template/header.html
-
-<h1>Lorem ipsum dolor.</h1>
-<p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Doloremque, minima.</p>
-
-//= template/footer.html
+<!DOCTYPE html>
+<html lang="en">
+  @@include('template/head.html', {
+    "title": "Главная"
+    })
+<body>
+  
+  @@include('template/header.html', {})
+  <h1>Lorem ipsum dolor.</h1>
+  <p>Lorem ipsum dolor sit amet, consectetur adipisicing elit. Doloremque, minima.</p>
+  
+  @@include('template/footer.html', {})
+  <script src="js/app.min.js"></script>
+</body>
+</html>
